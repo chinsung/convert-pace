@@ -10,13 +10,14 @@ import io
 import os
 import re
 import json
+from datetime import datetime
 
 import pdfplumber
 import streamlit as st
 import pandas as pd
 from openpyxl import Workbook
 
-COLUMNS = ["File", "Name", "Test Date", "A1", "L1a", "L1b", "L2", "L3", "L4", "L5", "L6", "L7"]
+COLUMNS = ["Date", "Name", "A1", "L1a", "L1b", "L2", "L3", "L4", "L5", "L6", "L7"]
 
 ENABLE_GOOGLE_SHEET_IMPORT = False  # ตั้งเป็น True เมื่อพร้อมใช้ฟีเจอร์ Import to Google Sheet
 
@@ -58,6 +59,20 @@ def extract_name_and_date(text: str):
         name = f"{first} {last}"
     date = date_match.group(1) if date_match else None
     return name, date
+
+
+def format_date_dd_mmm_yyyy(date_str: str):
+    if not date_str:
+        return ""
+
+    # Support both d/m/yyyy and m/d/yyyy inputs, then normalize to dd-MMM-yyyy.
+    for fmt in ("%d/%m/%Y", "%m/%d/%Y"):
+        try:
+            parsed = datetime.strptime(date_str, fmt)
+            return parsed.strftime("%d-%b-%Y")
+        except ValueError:
+            continue
+    return date_str
 
 
 def extract_base_paces(text: str):
@@ -110,7 +125,7 @@ def process_pdf(file_name: str, file_bytes):
     base_paces = extract_base_paces(text)
     zones = compute_zones(base_paces)
 
-    row = {"File": file_name, "Name": name, "Test Date": date}
+    row = {"Date": format_date_dd_mmm_yyyy(date), "Name": name}
     for key in ["A1", "L1a", "L1b", "L2", "L3", "L4", "L5", "L6", "L7"]:
         row[key] = seconds_to_mmss(zones[key])
     return row
