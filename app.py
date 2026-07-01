@@ -65,8 +65,9 @@ def format_date_dd_mmm_yyyy(date_str: str):
     if not date_str:
         return ""
 
-    # Support both d/m/yyyy and m/d/yyyy inputs, then normalize to dd-MMM-yyyy.
-    for fmt in ("%d/%m/%Y", "%m/%d/%Y"):
+    # Support both m/d/yyyy and d/m/yyyy inputs, then normalize to dd-MMM-yyyy.
+    # We prioritize %m/%d/%Y to correctly parse dates like 5/2/2026 as May 2nd.
+    for fmt in ("%m/%d/%Y", "%d/%m/%Y"):
         try:
             parsed = datetime.strptime(date_str, fmt)
             return parsed.strftime("%d-%b-%Y")
