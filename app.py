@@ -142,6 +142,15 @@ def to_excel_bytes(rows):
     wb.save(buffer)
     return buffer.getvalue()
 
+def to_csv_bytes(rows):
+    df = pd.DataFrame(rows, columns=COLUMNS)
+    # Keep CSV text values without a leading zero (e.g. 01-Jul-2026 -> 1-Jul-2026).
+    text_columns = ["Date", "A1", "L1a", "L1b", "L2", "L3", "L4", "L5", "L6", "L7"]
+    for col in text_columns:
+        df[col] = df[col].map(lambda v: re.sub(r"^0(?=\d)", "", v) if isinstance(v, str) else v)
+    # UTF-8 with BOM keeps CSV readable in Excel on Windows.
+    return df.to_csv(index=False).encode("utf-8-sig")
+
 
 def import_to_google_sheet(rows, sheet_id: str, credentials_json: dict):
     """
@@ -196,12 +205,25 @@ if uploaded_files:
         st.dataframe(df, use_container_width=True)
 
         excel_bytes = to_excel_bytes(rows)
-        st.download_button(
-            "⬇️ ดาวน์โหลด Excel",
-            data=excel_bytes,
-            file_name="training_zones_output.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+        csv_bytes = to_csv_bytes(rows)
+
+        col_excel, col_csv = st.columns(2)
+        with col_excel:
+            st.download_button(
+                "⬇️ ดาวน์โหลด Excel",
+                data=excel_bytes,
+                file_name="training_zones_output.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True,
+            )
+        with col_csv:
+            st.download_button(
+                "⬇️ ดาวน์โหลด CSV",
+                data=csv_bytes,
+                file_name="training_zones_output.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
         if ENABLE_GOOGLE_SHEET_IMPORT:
             st.divider()
